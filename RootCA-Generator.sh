@@ -21,10 +21,10 @@ echo -n "Enter serialNumber: "
 read serialNumber
 
 # Generate 4096-bit RSA private key
-openssl genpkey -outform PEM -algorithm RSA -pkeyopt rsa_keygen_bits:4096 -out priv.key
+openssl genpkey -outform PEM -algorithm RSA -pkeyopt rsa_keygen_bits:4096 -out root.key
 
 # Create CSR using user-provided information
-openssl req -new -nodes -key priv.key -config <(cat <<-EOF
+openssl req -new -nodes -key root.key -config <(cat <<-EOF
 [ req ]
 default_md = sha256
 prompt = no
@@ -42,10 +42,10 @@ extendedKeyUsage=critical,serverAuth,clientAuth,codeSigning,emailProtection,time
 basicConstraints=critical,CA:true
 tlsfeature=status_request
 EOF
-) -nameopt utf8 -utf8 -out cert.csr
+) -nameopt utf8 -utf8 -out root.csr
 
 # Self-sign the CSR with 100-year validity and version 3
-openssl req -x509 -nodes -in cert.csr -days 36525 -key priv.key -config <(cat <<-EOF
+openssl req -x509 -nodes -in root.csr -days 36525 -key root.key -config <(cat <<-EOF
 [ req ]
 default_md = sha256
 prompt = no
@@ -63,13 +63,13 @@ extendedKeyUsage=critical,serverAuth,clientAuth,codeSigning,emailProtection,time
 basicConstraints=critical,CA:true
 tlsfeature=status_request
 EOF
-) -extensions req_ext -nameopt utf8 -utf8 -out cert.crt
+) -extensions req_ext -nameopt utf8 -utf8 -out root.crt
 
 # Export private key and certificate to P12 file
-openssl pkcs12 -export -inkey priv.key -in cert.crt -out cert.p12 -name "C-OSSL-B CA Certificate"
+openssl pkcs12 -export -inkey root.key -in root.crt -out root.p12 -name "C-OSSL-B CA Certificate"
 
 echo "Generated files:"
-echo "- priv.key (private key)"
-echo "- cert.csr (certificate signing request)"
-echo "- cert.crt (certificate)"
-echo "- cert.p12 (PKCS#12 bundle)"
+echo "- root.key (private key)"
+echo "- root.csr (certificate signing request)"
+echo "- root.crt (certificate)"
+echo "- root.p12 (PKCS#12 bundle)"
