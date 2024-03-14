@@ -2,8 +2,12 @@
 
 clear
 
-# Create cool design with symbols (output omitted for brevity)
-# ...
+# Create cool design with symbols (optional, uncomment if desired)
+# echo "   _ _  _ _  _ _   _ _ "
+# echo "   | | | ( )(_| | | | |  | | |"
+# echo "   | |_| |/ / _ \ |_| |__ | | |"
+# echo "   | __|  | (_) | __| '_ \| | |"
+# echo "   |_|   |_|\___|_| |_.__/|_| |"
 
 echo -n "Enter commonName (server hostname, e.g., domain.example.com): "
 read commonName
@@ -64,28 +68,14 @@ EOF
 
 openssl req -new -nodes -key server.key -config server.cnf -out server.csr
 
-# Sign the CSR with the intermediate CA
-openssl ca -in server.csr -out server.crt -cert intermediate.crt -keyfile intermediate.key -days 36525 -extensions v3_req -config <<-EOF
-[ ca ]
-default_ca = CA_default
-[ CA_default ]
-default_md = sha256
-preserve = no
-policy = policy_loose
-[ policy_loose ]
-countryName = optional
-stateOrProvinceName = optional
-localityName = optional
-organizationName = optional
-organizationalUnitName = optional
-commonName = supplied
-emailAddress = optional
-EOF
+# Sign the CSR with the Root CA (replace with your actual Root CA paths)
+openssl x509 -req -in server.csr -CA root.crt -CAkey root.key -CAcreateserial \
+  -days 36525 -sha256 -extfile server.cnf -extensions req_ext -out server.crt
 
-# Create a full chain certificate
-cat intermediate.crt root.crt > server.chain.pem
+# Create a full chain certificate (server + root)
+cat server.crt root.crt > server.chain.pem
 
-# Export private key and certificate chain to P12 file
+# Export private key and certificate chain to P12 file (optional)
 openssl pkcs12 -export -inkey server.key -in server.crt -certfile server.chain.pem -out server.p12 -name "C-OSSL-B Web Server Certificate"
 
 echo "Generated files:"
@@ -93,9 +83,12 @@ echo "- server.key (private key)"
 echo "- server.csr (certificate signing request)"
 echo "- server.crt (certificate)"
 echo "- server.chain.pem (full chain certificate)"
-echo "- server.p12 (PKCS#12 bundle)"
+# Uncomment the line below if you enabled P12 export
+# echo "- server.p12 (PKCS#12 bundle)"
 
 # Clean up temporary configuration file
 rm -f server.cnf
 
-echo "**Note:** This script assumes the intermediate CA files (intermediate.csr, intermediate.crt, intermediate.key, intermediate.p12) and root CA files (root.csr, root.crt, root.key, root.p12) exist in the same directory as the script."
+echo "To view the SAN names in the server certificate, use the following command:"
+echo "openssl x509 -in server.crt -noout -text | grep Subject:Alt"
+
